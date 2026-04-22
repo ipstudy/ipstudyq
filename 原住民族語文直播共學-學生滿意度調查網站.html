@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>族語直播課：真心話大調查</title>
+    <style>
+        body {
+            font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+            background-color: #Fdf6e3;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 800px;
+            padding: 30px;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        h1, h2 { text-align: center; color: #ff8c00; }
+
+        /* 承辦人填寫區樣式 */
+        .admin-form { display: flex; flex-direction: column; gap: 20px; }
+        .admin-form label { font-size: 1.2rem; font-weight: bold; }
+        .admin-form input {
+            padding: 15px; font-size: 1.2rem; border: 2px solid #ddd; border-radius: 10px; outline: none;
+        }
+        .reminder {
+            color: #e74c3c; font-size: 0.95rem; font-weight: bold; text-align: center;
+            background-color: #fdeaea; padding: 12px; border-radius: 8px; margin-bottom: 20px;
+        }
+
+        /* 頂部進度條與返回按鈕區塊 */
+        .survey-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        /* ★ 更新：讓「上一題」按鈕支援注音排版 ★ */
+        .btn-back-top {
+            display: flex;
+            align-items: center;
+            background-color: #ecf0f1;
+            color: #333;
+            border: none;
+            border-radius: 12px;
+            padding: 8px 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .btn-back-top:hover { background-color: #bdc3c7; }
+        .btn-back-top .bpmf-container { margin-bottom: 0; gap: 0; }
+        .btn-back-top .bpmf-char { font-size: 1.1rem; }
+        .btn-back-top .bpmf-symbols { font-size: 0.5rem; }
+        .btn-back-top .bpmf-tone { right: -8px; font-size: 0.5rem; }
+        .btn-back-top .bpmf-tone-light { top: -8px; font-size: 0.5rem; }
+
+        /* 進度條 */
+        .progress-container { 
+            flex-grow: 1; 
+            background-color: #eee; 
+            border-radius: 10px; 
+            height: 15px; 
+            overflow: hidden; 
+        }
+        .progress-bar { height: 100%; background-color: #4CAF50; width: 0%; transition: width 0.3s ease; }
+
+        /* 底部送出按鈕 */
+        .btn-container { display: flex; justify-content: center; margin-top: 30px; }
+        .btn-next, .btn-submit {
+            padding: 12px 30px; border: none; border-radius: 50px; cursor: pointer;
+            transition: 0.3s; font-weight: bold; font-size: 1.2rem;
+            background-color: #ff8c00; color: white;
+        }
+        .btn-next:hover, .btn-submit:hover { background-color: #e67e22; }
+
+        /* 問卷卡片 */
+        .question-card { display: none; flex-direction: column; align-items: center; text-align: center; animation: fadeIn 0.4s ease; }
+        .question-card.active { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ★ 注音排版 ★ */
+        .bpmf-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; margin-bottom: 25px; line-height: 1.6; }
+        .bpmf-word { display: inline-flex; align-items: center; margin: 0 3px; }
+        .bpmf-char { font-size: 2.2rem; font-weight: bold; }
+        .bpmf-symbols { display: inline-flex; flex-direction: column; position: relative; font-size: 0.8rem; margin-left: 2px; line-height: 1.1; }
+        .bpmf-tone { position: absolute; right: -10px; top: 50%; transform: translateY(-50%); font-size: 0.8rem; }
+        .bpmf-tone-light { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); font-size: 0.8rem; }
+        .bpmf-punct { font-size: 2.2rem; font-weight: bold; margin: 0 2px; display: flex; align-items: center; }
+
+        /* 選項按鈕 */
+        .options-grid { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; }
+        .option-btn {
+            display: flex; flex-direction: row; align-items: center; padding: 12px 20px;
+            border-radius: 15px; border: 3px solid transparent; cursor: pointer;
+            width: 100%; max-width: 600px; transition: 0.2s; box-sizing: border-box;
+        }
+        .option-btn.selected { border-color: #666; background-color: #fff !important; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .opt-1 { background-color: #FFD1DC; } .opt-2 { background-color: #FFE4B5; } 
+        .opt-3 { background-color: #FFFACD; } .opt-4 { background-color: #D5E8D4; } .opt-5 { background-color: #D4E6F1; }
+
+        .emoji { font-size: 2.5rem; margin-right: 15px; flex-shrink: 0; }
+        .option-btn .bpmf-char { font-size: 1.5rem; }
+        .option-btn .bpmf-symbols { font-size: 0.6rem; }
+
+        /* 超大悄悄話文字框設計 */
+        #textAns {
+            width: 100%;
+            max-width: 600px;
+            height: 250px;
+            padding: 20px;
+            font-size: 1.2rem;
+            font-family: inherit;
+            border: 2px solid #ddd;
+            border-radius: 15px;
+            outline: none;
+            resize: vertical; 
+            box-sizing: border-box;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.05); 
+        }
+        #textAns:focus {
+            border-color: #ff8c00;
+            background-color: #fffaf0; 
+        }
+
+        /* 感謝畫面 */
+        #page-thankyou { text-align: center; }
+        .thankyou-emoji { font-size: 5rem; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <div id="page-login">
+        <h1>🎤 族語直播課：真心話大調查 🎤</h1>
+        <div class="reminder">⚠️ 本頁請由學校承辦人或協同人員協助輸入</div>
+        <div class="admin-form">
+            <label>🏫 學生就讀學校：</label>
+            <input type="text" id="schoolInput" placeholder="請輸入學校名稱">
+            <label>👤 學生姓名：</label>
+            <input type="text" id="nameInput" placeholder="請輸入學生姓名">
+            <button class="btn-next" onclick="startSurvey()">開始填寫 🚀</button>
+        </div>
+    </div>
+
+    <div id="page-survey" style="display: none;">
+        <div class="survey-header">
+            <button id="backBtn" class="btn-back-top" style="display: none;" onclick="goBack()"></button>
+            <div class="progress-container"><div class="progress-bar" id="progressBar"></div></div>
+        </div>
+
+        <div id="questionsContainer" style="display: flex; flex-direction: column; align-items: center; width: 100%;"></div>
+        
+        <div class="btn-container">
+            <button id="submitBtn" class="btn-submit" style="display: none;" onclick="submitSurvey()">送出問卷 📤</button>
+        </div>
+    </div>
+
+    <div id="page-thankyou" style="display: none;">
+        <div class="thankyou-emoji">🎉</div>
+        <div id="thankYouBpmf"></div>
+    </div>
+
+</div>
+
+<script>
+    const surveyData = [
+        { id: 'q1', text: "透過螢幕和老師互動，你覺得這種方式新鮮或印象深刻嗎？", bpmf: ["ㄊㄡˋ","ㄍㄨㄛˋ","ㄧㄥˊ","ㄇㄨˋ","ㄏㄢˋ","ㄌㄠˇ","ㄕ","ㄏㄨˋ","ㄉㄨㄥˋ","ㄋㄧˇ","ㄐㄩㄝˊ","˙ㄉㄜ","ㄓㄜˋ","ㄓㄨㄥˇ","ㄈㄤ","ㄕˋ","ㄒㄧㄣ","ㄒㄧㄢ","ㄏㄨㄛˋ","ㄧㄣˋ","ㄒㄧㄤˋ","ㄕㄣ","ㄎㄜˋ","ㄇㄚ"], options: [
+            { emoji: "🤩", text: "覺得新鮮，有很多跟平常上課不一樣的地方", bpmf: ["ㄐㄩㄝˊ","˙ㄉㄜ","ㄒㄧㄣ","ㄒㄧㄢ","ㄧㄡˇ","ㄏㄣˇ","ㄉㄨㄛ","ㄍㄣ","ㄆㄧㄥˊ","ㄔㄤˊ","ㄕㄤˋ","ㄎㄜˋ","ㄅㄨˋ","ㄧˊ","ㄧㄤˋ","˙ㄉㄜ","ㄉㄧˋ","ㄈㄤ"], val: 5 },
+            { emoji: "😊", text: "還不錯，有一些地方讓我印象深刻", bpmf: ["ㄏㄞˊ","ㄅㄨˊ","ㄘㄨㄛˋ","ㄧㄡˇ","ㄧˋ","ㄒㄧㄝ","ㄉㄧˋ","ㄈㄤ","ㄖㄤˋ","ㄨㄛˇ","ㄧㄣˋ","ㄒㄧㄤˋ","ㄕㄣ","ㄎㄜˋ"], val: 4 },
+            { emoji: "😐", text: "還可以，跟在學校上課的感覺差不多", bpmf: ["ㄏㄞˊ","ㄎㄜˇ","ㄧˇ","ㄍㄣ","ㄗㄞˋ","ㄒㄩㄝˊ","ㄒㄧㄠˋ","ㄕㄤˋ","ㄎㄜˋ","˙ㄉㄜ","ㄍㄢˇ","ㄐㄩㄝˊ","ㄔㄚ","ㄅㄨˋ","ㄉㄨㄛ"], val: 3 },
+            { emoji: "😕", text: "覺得普通，沒有特別印象深刻的地方", bpmf: ["ㄐㄩㄝˊ","˙ㄉㄜ","ㄆㄨˇ","ㄊㄨㄥ","ㄇㄟˊ","ㄧㄡˇ","ㄊㄜˋ","ㄅㄧㄝˊ","ㄧㄣˋ","ㄒㄧㄤˋ","ㄕㄣ","ㄎㄜˋ","˙ㄉㄜ","ㄉㄧˋ","ㄈㄤ"], val: 2 },
+            { emoji: "🥺", text: "比較不習慣，還是比較喜歡現場上課", bpmf: ["ㄅㄧˇ","ㄐㄧㄠˋ","ㄅㄨˋ","ㄒㄧˊ","ㄍㄨㄢˋ","ㄏㄞˊ","ㄕˋ","ㄅㄧˇ","ㄐㄧㄠˋ","ㄒㄧˇ","ㄏㄨㄢ","ㄒㄧㄢˋ","ㄔㄤˇ","ㄕㄤˋ","ㄎㄜˋ"], val: 1 }
+        ], next: 'q2' },
+        { id: 'q2', text: "當老師或助教鼓勵你時，會讓你比較敢嘗試說族語嗎？", bpmf: ["ㄉㄤ","ㄌㄠˇ","ㄕ","ㄏㄨㄛˋ","ㄓㄨˋ","ㄐㄧㄠˋ","ㄍㄨˇ","ㄌㄧˋ","ㄋㄧˇ","ㄕˊ","ㄏㄨㄟˋ","ㄖㄤˋ","ㄋㄧˇ","ㄅㄧˇ","ㄐㄧㄠˋ","ㄍㄢˇ","ㄔㄤˊ","ㄕˋ","ㄕㄨㄛ","ㄗㄨˊ","ㄩˇ","ㄇㄚ"], options: [
+            { emoji: "💪", text: "有幫助，會讓我想開口試試看", bpmf: ["ㄧㄡˇ","ㄅㄤ","ㄓㄨˋ","ㄏㄨㄟˋ","ㄖㄤˋ","ㄨㄛˇ","ㄒㄧㄤˇ","ㄎㄞ","ㄎㄡˇ","ㄕˋ","ㄕˋ","ㄎㄢˋ"], val: 5 },
+            { emoji: "👍", text: "還可以，會增加一點嘗試的意願", bpmf: ["ㄏㄞˊ","ㄎㄜˇ","ㄧˇ","ㄏㄨㄟˋ","ㄗㄥ","ㄐㄧㄚ","ㄧˋ","ㄉㄧㄢˇ","ㄔㄤˊ","ㄕˋ","˙ㄉㄜ","ㄧˋ","ㄩㄢˋ"], val: 4 },
+            { emoji: "🫣", text: "普通，有時候會想試，有時候還是會害羞", bpmf: ["ㄆㄨˇ","ㄊㄨㄥ","ㄧㄡˇ","ㄕˊ","˙ㄏㄡ","ㄏㄨㄟˋ","ㄒㄧㄤˇ","ㄕˋ","ㄧㄡˇ","ㄕˊ","˙ㄏㄡ","ㄏㄞˊ","ㄕˋ","ㄏㄨㄟˋ","ㄏㄞˋ","ㄒㄧㄡ"], val: 3 },
+            { emoji: "😓", text: "幫助不多，還是不太敢開口說", bpmf: ["ㄅㄤ","ㄓㄨˋ","ㄅㄨˋ","ㄉㄨㄛ","ㄏㄞˊ","ㄕˋ","ㄅㄨˊ","ㄊㄞˋ","ㄍㄢˇ","ㄎㄞ","ㄎㄡˇ","ㄕㄨㄛ"], val: 2 },
+            { emoji: "😶", text: "沒有影響，不論有沒有鼓勵都不太敢說", bpmf: ["ㄇㄟˊ","ㄧㄡˇ","ㄧㄥˇ","ㄒㄧㄤˇ","ㄅㄨˊ","ㄌㄨㄣˋ","ㄧㄡˇ","ㄇㄟˊ","ㄧㄡˇ","ㄍㄨˇ","ㄌㄧˋ","ㄉㄡ","ㄅㄨˊ","ㄊㄞˋ","ㄍㄢˇ","ㄕㄨㄛ"], val: 1 }
+        ], next: 'q3' },
+        { id: 'q3', text: "下面這些上課方式，哪一種最能吸引你、讓你覺得時間過很快？", bpmf: ["ㄒㄧㄚˋ","ㄇㄧㄢˋ","ㄓㄜˋ","ㄒㄧㄝ","ㄕㄤˋ","ㄎㄜˋ","ㄈㄤ","ㄕˋ","ㄋㄚˇ","ㄧˋ","ㄓㄨㄥˇ","ㄗㄨㄟˋ","ㄋㄥˊ","ㄒㄧ","ㄧㄣˇ","ㄋㄧˇ","ㄖㄤˋ","ㄋㄧˇ","ㄐㄩㄝˊ","˙ㄉㄜ","ㄕˊ","ㄐㄧㄢ","ㄍㄨㄛˋ","ㄏㄣˇ","ㄎㄨㄞˋ"], options: [
+            { emoji: "🎮", text: "趣味互動遊戲", bpmf: ["ㄑㄩˋ","ㄨㄟˋ","ㄏㄨˋ","ㄉㄨㄥˋ","ㄧㄡˊ","ㄒㄧˋ"], val: 1 },
+            { emoji: "🎵", text: "族語歌曲律動", bpmf: ["ㄗㄨˊ","ㄩˇ","ㄍㄜ","ㄑㄩˇ","ㄌㄩˋ","ㄉㄨㄥˋ"], val: 2 },
+            { emoji: "🏕️", text: "傳統文化分享", bpmf: ["ㄔㄨㄢˊ","ㄊㄨㄥˇ","ㄨㄣˊ","ㄏㄨㄚˋ","ㄈㄣ","ㄒㄧㄤˇ"], val: 3 },
+            { emoji: "📖", text: "部落歷史故事", bpmf: ["ㄅㄨˋ","ㄌㄨㄛˋ","ㄌㄧˋ","ㄕˇ","ㄍㄨˋ","˙ㄕ"], val: 4 },
+            { emoji: "💻", text: "線上互動任務", bpmf: ["ㄒㄧㄢˋ","ㄕㄤˋ","ㄏㄨˋ","ㄉㄨㄥˋ","ㄖㄣˋ","ㄨˋ"], val: 5 }
+        ], next: 'q4' },
+        { id: 'q4', text: "家裡平時有人會跟你說族語嗎？", bpmf: ["ㄐㄧㄚ","ㄌㄧˇ","ㄆㄧㄥˊ","ㄕˊ","ㄧㄡˇ","ㄖㄣˊ","ㄏㄨㄟˋ","ㄍㄣ","ㄋㄧˇ","ㄕㄨㄛ","ㄗㄨˊ","ㄩˇ","ㄇㄚ"], options: [
+            { emoji: "🏠", text: "有，家裡有人會說", bpmf: ["ㄧㄡˇ","ㄐㄧㄚ","ㄌㄧˇ","ㄧㄡˇ","ㄖㄣˊ","ㄏㄨㄟˋ","ㄕㄨㄛ"], val: "yes", next: 'q4a' },
+            { emoji: "🙅‍♂️", text: "沒有，家裡沒人會說", bpmf: ["ㄇㄟˊ","ㄧㄡˇ","ㄐㄧㄚ","ㄌㄧˇ","ㄇㄟˊ","ㄖㄣˊ","ㄏㄨㄟˋ","ㄕㄨㄛ"], val: "no", next: 'q4b' }
+        ] },
+        { id: 'q4a', text: "這對你學習有幫助嗎？未來會想參加認證嗎？", bpmf: ["ㄓㄜˋ","ㄉㄨㄟˋ","ㄋㄧˇ","ㄒㄩㄝˊ","ㄒㄧˊ","ㄧㄡˇ","ㄅㄤ","ㄓㄨˋ","ㄇㄚ","ㄨㄟˋ","ㄌㄞˊ","ㄏㄨㄟˋ","ㄒㄧㄤˇ","ㄘㄢ","ㄐㄧㄚ","ㄖㄣˋ","ㄓㄥˋ","ㄇㄚ"], options: [
+            { emoji: "🌟", text: "有幫助，也會考慮參加族語認證", bpmf: ["ㄧㄡˇ","ㄅㄤ","ㄓㄨˋ","ㄧㄝˇ","ㄏㄨㄟˋ","ㄎㄠˇ","ㄌㄩˋ","ㄘㄢ","ㄐㄧㄚ","ㄗㄨˊ","ㄩˇ","ㄖㄣˋ","ㄓㄥˋ"], val: 5 },
+            { emoji: "🤔", text: "有一點幫助，參加認證在考慮範圍內", bpmf: ["ㄧㄡˇ","ㄧˋ","ㄉㄧㄢˇ","ㄅㄤ","ㄓㄨˋ","ㄘㄢ","ㄐㄧㄚ","ㄖㄣˋ","ㄓㄥˋ","ㄗㄞˋ","ㄎㄠˇ","ㄌㄩˋ","ㄈㄢˋ","ㄨㄟˊ","ㄋㄟˋ"], val: 4 },
+            { emoji: "⚖️", text: "普通，參加認證的意願一半一半", bpmf: ["ㄆㄨˇ","ㄊㄨㄥ","ㄘㄢ","ㄐㄧㄚ","ㄖㄣˋ","ㄓㄥˋ","˙ㄉㄜ","ㄧˋ","ㄩㄢˋ","ㄧˊ","ㄅㄢˋ","ㄧˊ","ㄅㄢˋ"], val: 3 },
+            { emoji: "📉", text: "幫助不多，目前參加認證的意願不高", bpmf: ["ㄅㄤ","ㄓㄨˋ","ㄅㄨˋ","ㄉㄨㄛ","ㄇㄨˋ","ㄑㄧㄢˊ","ㄘㄢ","ㄐㄧㄚ","ㄖㄣˋ","ㄓㄥˋ","˙ㄉㄜ","ㄧˋ","ㄩㄢˋ","ㄅㄨˋ","ㄍㄠ"], val: 2 },
+            { emoji: "🚫", text: "沒什麼幫助，目前沒有參加認證的想法", bpmf: ["ㄇㄟˊ","ㄕㄣˊ","˙ㄇㄜ","ㄅㄤ","ㄓㄨˋ","ㄇㄨˋ","ㄑㄧㄢˊ","ㄇㄟˊ","ㄧㄡˇ","ㄘㄢ","ㄐㄧㄚ","ㄖㄣˋ","ㄓㄥˋ","˙ㄉㄜ","ㄒㄧㄤˇ","ㄈㄚˇ"], val: 1 }
+        ], next: 'q5' },
+        { id: 'q4b', text: "你會如何運用課堂學到的單字或句子？", bpmf: ["ㄋㄧˇ","ㄏㄨㄟˋ","ㄖㄨˊ","ㄏㄜˊ","ㄩㄣˋ","ㄩㄥˋ","ㄎㄜˋ","ㄊㄤˊ","ㄒㄩㄝˊ","ㄉㄠˋ","˙ㄉㄜ","ㄉㄢ","ㄗˋ","ㄏㄨㄛˋ","ㄐㄩˋ","˙ㄗ"], options: [
+            { emoji: "🗣️", text: "會找機會練習，例如主動唸給家人聽", bpmf: ["ㄏㄨㄟˋ","ㄓㄠˇ","ㄐㄧ","ㄏㄨㄟˋ","ㄌㄧㄢˋ","ㄒㄧˊ","ㄌㄧˋ","ㄖㄨˊ","ㄓㄨˇ","ㄉㄨㄥˋ","ㄋㄧㄢˋ","ㄍㄟˇ","ㄐㄧㄚ","ㄖㄣˊ","ㄊㄧㄥ"], val: 5 },
+            { emoji: "📚", text: "偶爾會複習課本，或是自己唸一下", bpmf: ["ㄡˇ","ㄦˇ","ㄏㄨㄟˋ","ㄈㄨˋ","ㄒㄧˊ","ㄎㄜˋ","ㄅㄣˇ","ㄏㄨㄛˋ","ㄕˋ","ㄗˋ","ㄐㄧˇ","ㄋㄧㄢˋ","ㄧˊ","ㄒㄧㄚˋ"], val: 4 },
+            { emoji: "🙋", text: "只有在老師提問時才會想到要用", bpmf: ["ㄓˇ","ㄧㄡˇ","ㄗㄞˋ","ㄌㄠˇ","ㄕ","ㄊㄧˊ","ㄨㄣˋ","ㄕˊ","ㄘㄞˊ","ㄏㄨㄟˋ","ㄒㄧㄤˇ","ㄉㄠˋ","ㄧㄠˋ","ㄩㄥˋ"], val: 3 },
+            { emoji: "😅", text: "比較少練習，回家後容易忘記", bpmf: ["ㄅㄧˇ","ㄐㄧㄠˋ","ㄕㄠˇ","ㄌㄧㄢˋ","ㄒㄧˊ","ㄏㄨㄟˊ","ㄐㄧㄚ","ㄏㄡˋ","ㄖㄨㄥˊ","ㄧˋ","ㄨㄤˋ","ㄐㄧˋ"], val: 2 },
+            { emoji: "🏫", text: "沒機會練習，只有上課才會接觸", bpmf: ["ㄇㄟˊ","ㄐㄧ","ㄏㄨㄟˋ","ㄌㄧㄢˋ","ㄒㄧˊ","ㄓˇ","ㄧㄡˇ","ㄕㄤˋ","ㄎㄜˋ","ㄘㄞˊ","ㄏㄨㄟˋ","ㄐㄧㄝ","ㄔㄨˋ"], val: 1 }
+        ], next: 'q5' },
+        { id: 'q5', text: "你對現在的教材滿意嗎？（例如字的大小、繪本故事）", bpmf: ["ㄋㄧˇ","ㄉㄨㄟˋ","ㄒㄧㄢˋ","ㄗㄞˋ","˙ㄉㄜ","ㄐㄧㄠˋ","ㄘㄞˊ","ㄇㄢˇ","ㄧˋ","ㄇㄚ","ㄌㄧˋ","ㄖㄨˊ","ㄗˋ","˙ㄉㄜ","ㄉㄚˋ","ㄒㄧㄠˇ","ㄏㄨㄟˋ","ㄅㄣˇ","ㄍㄨˋ","ㄕˋ"], options: [
+            { emoji: "😍", text: "滿意，內容設計都滿適合的", bpmf: ["ㄇㄢˇ","ㄧˋ","ㄋㄟˋ","ㄖㄨㄥˊ","ㄕㄜˋ","ㄐㄧˋ","ㄉㄡ","ㄇㄢˇ","ㄕˋ","ㄏㄜˊ","˙ㄉㄜ"], val: 5 },
+            { emoji: "😊", text: "還算滿意，大部分都好閱讀", bpmf: ["ㄏㄞˊ","ㄙㄨㄢˋ","ㄇㄢˇ","ㄧˋ","ㄉㄚˋ","ㄅㄨˋ","ㄈㄣˋ","ㄉㄡ","ㄏㄠˇ","ㄩㄝˋ","ㄉㄨˊ"], val: 4 },
+            { emoji: "😐", text: "普通，內容跟排版可以再微調", bpmf: ["ㄆㄨˇ","ㄊㄨㄥ","ㄋㄟˋ","ㄖㄨㄥˊ","ㄍㄣ","ㄆㄞˊ","ㄅㄢˇ","ㄎㄜˇ","ㄧˇ","ㄗㄞˋ","ㄨㄟˊ","ㄊㄧㄠˊ"], val: 3 },
+            { emoji: "😕", text: "不太滿意，覺得繪本不夠好玩", bpmf: ["ㄅㄨˊ","ㄊㄞˋ","ㄇㄢˇ","ㄧˋ","ㄐㄩㄝˊ","˙ㄉㄜ","ㄏㄨㄟˋ","ㄅㄣˇ","ㄅㄨˋ","ㄍㄡˋ","ㄏㄠˇ","ㄨㄢˊ"], val: 2 },
+            { emoji: "😢", text: "不滿意，教材不太適合學習", bpmf: ["ㄅㄨˋ","ㄇㄢˇ","ㄧˋ","ㄐㄧㄠˋ","ㄘㄞˊ","ㄅㄨˊ","ㄊㄞˋ","ㄕˋ","ㄏㄜˊ","ㄒㄩㄝˊ","ㄒㄧˊ"], val: 1 }
+        ], next: 'q6' },
+        { id: 'q6', text: "直播課跟你理想中上課的樣子接近嗎？", bpmf: ["ㄓˊ","ㄅㄛ","ㄎㄜˋ","ㄍㄣ","ㄋㄧˇ","ㄌㄧˇ","ㄒㄧㄤˇ","ㄓㄨㄥ","ㄕㄤˋ","ㄎㄜˋ","˙ㄉㄜ","ㄧㄤˋ","˙ㄗ","ㄐㄧㄝ","ㄐㄧㄣˋ","ㄇㄚ"], options: [
+            { emoji: "🎯", text: "接近，就是我想像中的樣子", bpmf: ["ㄐㄧㄝ","ㄐㄧㄣˋ","ㄐㄧㄡˋ","ㄕˋ","ㄨㄛˇ","ㄒㄧㄤˇ","ㄒㄧㄤˋ","ㄓㄨㄥ","˙ㄉㄜ","ㄧㄤˋ","˙ㄗ"], val: 5 },
+            { emoji: "👌", text: "還可以，有一部分符合想法", bpmf: ["ㄏㄞˊ","ㄎㄜˇ","ㄧˇ","ㄧㄡˇ","ㄧˊ","ㄅㄨˋ","ㄈㄣˋ","ㄈㄨˊ","ㄏㄜˊ","ㄒㄧㄤˇ","ㄈㄚˇ"], val: 3 },
+            { emoji: "🙅", text: "不接近，跟我希望的不一樣", bpmf: ["ㄅㄨˋ","ㄐㄧㄝ","ㄐㄧㄣˋ","ㄍㄣ","ㄨㄛˇ","ㄒㄧ","ㄨㄤˋ","˙ㄉㄜ","ㄅㄨˋ","ㄧˊ","ㄧㄤˋ"], val: 1 }
+        ], next: 'q7' },
+        { id: 'q7', text: "如果讓你當小設計師，你會想調整現在的課嗎？", bpmf: ["ㄖㄨˊ","ㄍㄨㄛˇ","ㄖㄤˋ","ㄋㄧˇ","ㄉㄤ","ㄒㄧㄠˇ","ㄕㄜˋ","ㄐㄧˋ","ㄕ","ㄋㄧˇ","ㄏㄨㄟˋ","ㄒㄧㄤˇ","ㄊㄧㄠˊ","ㄓㄥˇ","ㄒㄧㄢˋ","ㄗㄞˋ","˙ㄉㄜ","ㄎㄜˋ","ㄇㄚ"], options: [
+            { emoji: "🎨", text: "會想調整許多地方", bpmf: ["ㄏㄨㄟˋ","ㄒㄧㄤˇ","ㄊㄧㄠˊ","ㄓㄥˇ","ㄒㄩˇ","ㄉㄨㄛ","ㄉㄧˋ","ㄈㄤ"], val: 5 },
+            { emoji: "👍", text: "不調整，現在這樣就很好", bpmf: ["ㄅㄨˋ","ㄊㄧㄠˊ","ㄓㄥˇ","ㄒㄧㄢˋ","ㄗㄞˋ","ㄓㄜˋ","ㄧㄤˋ","ㄐㄧㄡˋ","ㄏㄣˇ","ㄏㄠˇ"], val: 1 }
+        ], next: 'q8' },
+        { id: 'q8', type: 'text', text: "最後，你有什麼悄悄話想對我們說嗎？", bpmf: ["ㄗㄨㄟˋ","ㄏㄡˋ","ㄋㄧˇ","ㄧㄡˇ","ㄕㄣˊ","˙ㄇㄜ","ㄑㄧㄠˇ","ㄑㄧㄠˇ","ㄏㄨㄚˋ","ㄒㄧㄤˇ","ㄉㄨㄟˋ","ㄨㄛˇ","˙ㄇㄣ","ㄕㄨㄛ","ㄇㄚ"], next: null }
+    ];
+
+    let currentPath = []; 
+    let answers = {};
+    const optColors = ["opt-1", "opt-2", "opt-3", "opt-4", "opt-5"];
+
+    function generateBpmfHTML(text, bpmfArray) {
+        let html = '<div class="bpmf-container">';
+        let bIndex = 0;
+        const ignore = ['，', '？', '！', '。', '、', '（', '）', '：'];
+        for (let char of text) {
+            if (ignore.includes(char)) { html += `<span class="bpmf-punct">${char}</span>`; continue; }
+            let bpmf = bpmfArray[bIndex++] || "";
+            let tone = '', light = '', base = bpmf;
+            if (base.startsWith('˙')) { light = '˙'; base = base.substring(1); }
+            else if (['ˊ', 'ˇ', 'ˋ'].includes(base.slice(-1))) { tone = base.slice(-1); base = base.slice(0,-1); }
+            html += `<span class="bpmf-word"><span class="bpmf-char">${char}</span><span class="bpmf-symbols">${light}${base.split('').join('<br>')}<span class="bpmf-tone">${tone}</span></span></span>`;
+        }
+        return html + '</div>';
+    }
+
+    function startSurvey() {
+        const s = document.getElementById('schoolInput').value;
+        const n = document.getElementById('nameInput').value;
+        if(!s || !n) return alert('請老師協助填寫學校與姓名！');
+        answers.school = s; answers.name = n;
+        document.getElementById('page-login').style.display='none';
+        document.getElementById('page-survey').style.display='block';
+
+        // ★ 更新：在這裡動態生成「上一題」的注音 HTML ★
+        const backBtnBpmf = generateBpmfHTML("上一題", ["ㄕㄤˋ", "ㄧˋ", "ㄊㄧˊ"]);
+        document.getElementById('backBtn').innerHTML = `<span style="font-size:1.5rem; margin-right:5px;">⬅️</span>` + backBtnBpmf;
+
+        renderQuestion('q1');
+    }
+
+    function renderQuestion(qId) {
+        const q = surveyData.find(d => d.id === qId);
+        const container = document.getElementById('questionsContainer');
+        container.innerHTML = generateBpmfHTML(q.text, q.bpmf);
+        
+        if(q.type === 'text') {
+            container.innerHTML += `<div class="reminder">💡 本題可由學校老師或協同人員協助輸入文字</div>
+                                   <textarea id="textAns" placeholder="請在這裡輸入想說的話...">${answers.q8 || ''}</textarea>`;
+            document.getElementById('submitBtn').style.display = 'block';
+        } else {
+            let optHtml = '<div class="options-grid">';
+            q.options.forEach((o, i) => {
+                const sel = answers[qId] === o.val ? 'selected' : '';
+                optHtml += `<div class="option-btn ${optColors[i]} ${sel}" onclick="select('${qId}', '${o.val}', '${o.next || q.next}')">
+                                <span class="emoji">${o.emoji}</span>${generateBpmfHTML(o.text, o.bpmf)}</div>`;
+            });
+            container.innerHTML += optHtml + '</div>';
+            document.getElementById('submitBtn').style.display = 'none';
+        }
+        document.getElementById('backBtn').style.display = currentPath.length > 0 ? 'flex' : 'none'; // 使用 flex 確保圖示和注音對齊
+        updateProgress();
+    }
+
+    function select(qId, val, next) {
+        answers[qId] = val;
+        currentPath.push(qId);
+        renderQuestion(next);
+    }
+
+    function goBack() {
+        if(currentPath.length > 0) {
+            if(document.getElementById('textAns')) {
+                answers.q8 = document.getElementById('textAns').value;
+            }
+            const prevId = currentPath.pop();
+            renderQuestion(prevId);
+        }
+    }
+
+    function updateProgress() {
+        const p = (currentPath.length / 8) * 100;
+        document.getElementById('progressBar').style.width = p + '%';
+    }
+
+    function submitSurvey() {
+        if(document.getElementById('textAns')) {
+            answers.q8 = document.getElementById('textAns').value;
+        }
+        console.log("Submit Data:", answers);
+        document.getElementById('page-survey').style.display = 'none';
+        document.getElementById('page-thankyou').style.display = 'block';
+        
+        const thanks1 = "太棒了！問卷已經完成！";
+        const b1 = ["ㄊㄞˋ","ㄅㄤˋ","ㄌㄜ","ㄨㄣˋ","ㄐㄩㄢˋ","ㄧˇ","ㄐㄧㄥ","ㄨㄢˊ","ㄔㄥˊ"];
+        const thanks2 = "謝謝你的幫忙，你超棒的！";
+        const b2 = ["ㄒㄧㄝˋ","ㄒㄧㄝˋ","ㄋㄧˇ","˙ㄉㄜ","ㄅㄤ","ㄇㄤˊ","ㄋㄧˇ","ㄔㄠ","ㄅㄤˋ","˙ㄉㄜ"];
+        
+        document.getElementById('thankYouBpmf').innerHTML = `<h1>${generateBpmfHTML(thanks1, b1)}</h1><h2>${generateBpmfHTML(thanks2, b2)}</h2>`;
+    }
+</script>
+</body>
+</html>
